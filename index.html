@@ -6,32 +6,10 @@
 <title>Infinite Recursion Camera</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
   body { font-family: 'Courier New', monospace; }
   video { display: none; }
-  #cv {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    display: block;
-  }
-  .rec {
-    position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 14px);
-    left: 16px;
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; letter-spacing: 2px; color: #ff4d4d;
-    text-shadow: 0 0 8px rgba(255,77,77,.7);
-    z-index: 5;
-  }
-  .rec .dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: #ff4d4d;
-    animation: blink 1.1s steps(1) infinite;
-    box-shadow: 0 0 8px rgba(255,77,77,.9);
-  }
-  @keyframes blink { 50% { opacity: 0; } }
+  #cv { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
   .title {
     position: fixed;
     top: calc(env(safe-area-inset-top, 0px) + 14px);
@@ -41,17 +19,49 @@
     color: #7df9ff;
     text-shadow: 0 0 10px rgba(125,249,255,.5);
     z-index: 5;
+    pointer-events: none;
+  }
+  #recBadge {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 14px);
+    left: 16px;
+    display: none;
+    align-items: center; gap: 6px;
+    font-size: 12px; letter-spacing: 2px; color: #ff4d4d;
+    text-shadow: 0 0 8px rgba(255,77,77,.7);
+    z-index: 5;
+    pointer-events: none;
+  }
+  #recBadge .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #ff4d4d;
+    animation: blink 1.1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  #bootMsg {
+    position: fixed;
+    top: 46%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: #7df9ff;
+    text-shadow: 0 0 14px rgba(125,249,255,.8);
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .25s;
   }
   .controls {
     position: fixed;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
     left: 0; right: 0;
     display: flex;
-    gap: 8px;
+    gap: 6px;
     justify-content: center;
     flex-wrap: wrap;
     z-index: 5;
-    padding: 0 12px;
+    padding: 0 10px;
   }
   button {
     background: rgba(14,14,22,.75);
@@ -59,13 +69,33 @@
     border: 1px solid rgba(125,249,255,.35);
     color: #7df9ff;
     font-family: inherit;
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: 1px;
-    padding: 12px 14px;
+    padding: 11px 12px;
     border-radius: 10px;
     cursor: pointer;
   }
   button:active { transform: scale(.94); background: rgba(125,249,255,.15); }
+  #shotBtn, #clipBtn { border-color: rgba(255,255,255,.4); color: #fff; font-size: 14px; padding: 9px 14px; }
+  #clipBtn.recording { border-color: #ff4d4d; color: #ff4d4d; }
+  #toast {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(14,14,22,.85);
+    border: 1px solid rgba(125,249,255,.4);
+    color: #7df9ff;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    z-index: 6;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+    text-align: center;
+  }
   #overlay {
     position: fixed; inset: 0;
     background: rgba(5,5,10,.94);
@@ -93,19 +123,27 @@
   <video id="vid" autoplay playsinline muted></video>
   <canvas id="cv"></canvas>
 
-  <div class="rec"><div class="dot"></div>REC</div>
   <div class="title">⟳ RECURSION CAM</div>
+  <div id="recBadge"><div class="dot"></div>CLIP</div>
+  <div id="bootMsg"></div>
+  <div id="toast"></div>
 
   <div class="controls">
-    <button id="camBtn">FLIP CAM</button>
+    <button id="shotBtn">📸</button>
+    <button id="clipBtn">⏺ 5s</button>
+    <button id="camBtn">FLIP</button>
+    <button id="screensBtn">SCREENS: 1</button>
+    <button id="delayBtn">DELAY: SYNC</button>
     <button id="zoomBtn">DEPTH: DEEP</button>
     <button id="twistBtn">TWIST: OFF</button>
     <button id="tintBtn">TINT: OFF</button>
+    <button id="bezelBtn">BEZEL: DARK</button>
+    <button id="fxBtn">FX: OFF</button>
   </div>
 
   <div id="overlay">
     <div class="icon">📹</div>
-    <p>TAP TO START THE LOOP</p>
+    <p>TAP TO START THE LOOP<br><span style="font-size:10px;color:#55c8d8">DRAG THE SCREEN TO MOVE THE TUNNEL</span></p>
     <div class="btn" id="startBtn">START CAMERA</div>
     <div class="err" id="errMsg"></div>
   </div>
@@ -116,66 +154,121 @@ const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const overlay = document.getElementById('overlay');
 const errMsg = document.getElementById('errMsg');
-
-let buf = document.createElement('canvas');
-let bctx = buf.getContext('2d');
+const toast = document.getElementById('toast');
+const recBadge = document.getElementById('recBadge');
+const bootMsg = document.getElementById('bootMsg');
 
 let scale = 0.82;
 let twist = 0;
 let tint = false;
-let facing = 'user';       // 'user' = front, 'environment' = back
+let facing = 'user';
 let stream = null;
 let running = false;
 let noCam = false;
 let t = 0;
+let screens = 1;
+let bezel = 0;   // 0 dark, 1 none, 2 neon, 3 rainbow
+let fx = 0;      // 0 off, 1 echo, 2 glitch
+let delayFrames = 1; // 1 sync, 5 lag, 12 timewarp
+
+// ---- frame history ring buffer (this is what makes the out-of-sync magic) ----
+// stored at reduced resolution to keep memory sane on phones
+const RING_SIZE = 14;
+let ring = [];
+let ringHead = 0;
+
+function makeRing() {
+  const maxW = 860;
+  const s = Math.min(1, maxW / cv.width);
+  ring = [];
+  for (let i = 0; i < RING_SIZE; i++) {
+    const c = document.createElement('canvas');
+    c.width = Math.floor(cv.width * s);
+    c.height = Math.floor(cv.height * s);
+    ring.push(c);
+  }
+  ringHead = 0;
+}
+
+function pastFrame(framesAgo) {
+  const idx = (ringHead - framesAgo + RING_SIZE * 4) % RING_SIZE;
+  return ring[idx];
+}
+
+// boot / build sequence
+let introStart = -1;
+const INTRO_MS = 3000;
+function playIntro(label) {
+  introStart = performance.now();
+  if (label) {
+    bootMsg.textContent = label;
+    bootMsg.style.opacity = 1;
+  }
+}
+function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
+
+// tunnel centre
+let cx = 0.5, cy = 0.5;
+let tx = 0.5, ty = 0.5;
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   cv.width = Math.floor(window.innerWidth * dpr);
   cv.height = Math.floor(window.innerHeight * dpr);
-  buf.width = cv.width;
-  buf.height = cv.height;
+  makeRing();
 }
 resize();
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 300));
 
+// ---- touch / drag ----
+function pointFromEvent(e) {
+  const p = e.touches ? e.touches[0] : e;
+  tx = p.clientX / window.innerWidth;
+  ty = p.clientY / window.innerHeight;
+}
+let dragging = false;
+cv.addEventListener('pointerdown', e => { dragging = true; pointFromEvent(e); });
+cv.addEventListener('pointermove', e => { if (dragging) pointFromEvent(e); });
+window.addEventListener('pointerup', () => { dragging = false; });
+cv.addEventListener('touchstart', e => { dragging = true; pointFromEvent(e); e.preventDefault(); }, { passive: false });
+cv.addEventListener('touchmove', e => { if (dragging) { pointFromEvent(e); e.preventDefault(); } }, { passive: false });
+window.addEventListener('touchend', () => { dragging = false; });
+
+// ---- camera ----
 async function startCamera() {
   errMsg.textContent = '';
-  // stop any existing stream
   if (stream) { stream.getTracks().forEach(tr => tr.stop()); stream = null; }
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     noCam = true;
-    errMsg.textContent = 'CAMERA API UNAVAILABLE IN THIS BROWSER/EMBED — RUNNING SIMULATED FEED. TRY OPENING IN YOUR BROWSER DIRECTLY.';
+    errMsg.textContent = 'CAMERA API UNAVAILABLE — RUNNING SIMULATED FEED.';
+    playIntro('INITIALISING LOOP');
     beginLoop();
-    setTimeout(() => overlay.classList.add('hidden'), 2500);
+    setTimeout(() => overlay.classList.add('hidden'), 2000);
     return;
   }
-
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: facing },
-      audio: false
-    });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
     vid.srcObject = stream;
     await vid.play();
     noCam = false;
     overlay.classList.add('hidden');
+    playIntro('INITIALISING LOOP');
     beginLoop();
   } catch (e) {
-    // Retry with any camera at all before giving up
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       vid.srcObject = stream;
       await vid.play();
       noCam = false;
       overlay.classList.add('hidden');
+      playIntro('INITIALISING LOOP');
       beginLoop();
     } catch (e2) {
       noCam = true;
-      errMsg.textContent = 'CAMERA BLOCKED: ' + (e2.name || e2.message) +
-        ' — CHECK SITE PERMISSIONS (LOCK ICON IN ADDRESS BAR → PERMISSIONS → CAMERA → ALLOW), THEN TAP START AGAIN. RUNNING SIMULATED FEED MEANWHILE.';
+      errMsg.textContent = 'CAMERA BLOCKED: ' + (e2.name || e2.message) + ' — ALLOW CAMERA IN SITE PERMISSIONS, THEN TAP START AGAIN.';
+      playIntro('INITIALISING LOOP');
       beginLoop();
     }
   }
@@ -185,12 +278,10 @@ function beginLoop() {
   if (!running) { running = true; requestAnimationFrame(draw); }
 }
 
-document.getElementById('startBtn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  startCamera();
-});
+document.getElementById('startBtn').addEventListener('click', e => { e.stopPropagation(); startCamera(); });
 overlay.addEventListener('click', startCamera);
 
+// ---- drawing ----
 function drawBase() {
   if (!noCam && vid.videoWidth) {
     const vr = vid.videoWidth / vid.videoHeight;
@@ -199,57 +290,201 @@ function drawBase() {
     if (vr > cr) { dh = cv.height; dw = dh * vr; }
     else { dw = cv.width; dh = dw / vr; }
     ctx.save();
+    if (fx === 1) ctx.globalAlpha = 0.35;
     if (facing === 'user') { ctx.translate(cv.width, 0); ctx.scale(-1, 1); }
     ctx.drawImage(vid, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
     ctx.restore();
+    ctx.globalAlpha = 1;
   } else {
     const g = ctx.createLinearGradient(0, 0, cv.width, cv.height);
     g.addColorStop(0, `hsl(${(t * 20) % 360}, 70%, 20%)`);
     g.addColorStop(1, `hsl(${(t * 20 + 120) % 360}, 70%, 35%)`);
     ctx.fillStyle = g;
+    if (fx === 1) ctx.globalAlpha = 0.35;
     ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.globalAlpha = 1;
   }
 }
 
-function draw() {
-  t += 0.016;
-  drawBase();
+function strokeBezel() {
+  if (bezel === 1) return;
+  const lw = Math.max(10, cv.width * 0.02);
+  if (bezel === 0) {
+    ctx.strokeStyle = 'rgba(15,15,25,.9)';
+    ctx.shadowBlur = 0;
+  } else if (bezel === 2) {
+    ctx.strokeStyle = 'rgba(125,249,255,.9)';
+    ctx.shadowColor = '#7df9ff';
+    ctx.shadowBlur = lw * 1.2;
+  } else {
+    ctx.strokeStyle = `hsl(${(t * 80) % 360}, 100%, 60%)`;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = lw;
+  }
+  ctx.lineWidth = bezel === 0 ? lw : lw * 0.6;
+  ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, cv.width - ctx.lineWidth, cv.height - ctx.lineWidth);
+  ctx.shadowBlur = 0;
+}
 
-  // feedback: previous composite drawn back inside itself
+function drawFeedbackAt(px, py, s, rot) {
+  const src = pastFrame(delayFrames);
   ctx.save();
-  ctx.translate(cv.width / 2, cv.height / 2);
-  if (twist) ctx.rotate(twist);
-  ctx.scale(scale, scale);
+  ctx.translate(px, py);
+  if (rot) ctx.rotate(rot);
+  ctx.scale(s, s);
   ctx.translate(-cv.width / 2, -cv.height / 2);
   if (tint) {
     ctx.globalAlpha = 0.96;
     ctx.filter = 'hue-rotate(18deg) saturate(1.15)';
   }
-  ctx.drawImage(buf, 0, 0);
+  ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, cv.width, cv.height);
   ctx.filter = 'none';
   ctx.globalAlpha = 1;
-
-  // bezel so each level reads as a phone screen
-  ctx.strokeStyle = 'rgba(15,15,25,.9)';
-  ctx.lineWidth = Math.max(10, cv.width * 0.02);
-  ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, cv.width - ctx.lineWidth, cv.height - ctx.lineWidth);
+  strokeBezel();
   ctx.restore();
+}
+
+function applyGlitch() {
+  if (Math.sin(t * 2.7) > 0.93) {
+    const bands = 4 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < bands; i++) {
+      const y = Math.random() * cv.height;
+      const h = 6 + Math.random() * 30;
+      const off = (Math.random() - 0.5) * cv.width * 0.12;
+      const slice = ctx.getImageData(0, y, cv.width, h);
+      ctx.putImageData(slice, off, y);
+    }
+  }
+}
+
+function draw() {
+  t += 0.016;
+  cx += (tx - cx) * 0.12;
+  cy += (ty - cy) * 0.12;
+
+  let effScale = scale;
+  if (introStart > 0) {
+    const p = Math.min(1, (performance.now() - introStart) / INTRO_MS);
+    effScale = scale * easeOutCubic(p);
+    const level = Math.floor(p * 12);
+    bootMsg.textContent = p < 1 ? 'LOOP DEPTH ' + String(level).padStart(2, '0') : '';
+    if (p >= 1) { introStart = -1; bootMsg.style.opacity = 0; }
+  }
+
+  drawBase();
+
+  const px = cx * cv.width;
+  const py = cy * cv.height;
+
+  if (screens === 1) {
+    drawFeedbackAt(px, py, effScale, twist);
+  } else if (screens === 2) {
+    drawFeedbackAt(px, py, effScale * 0.8, twist);
+    drawFeedbackAt(cv.width - px, cv.height - py, effScale * 0.8, -twist);
+  } else {
+    const r = Math.min(cv.width, cv.height) * 0.22;
+    for (let i = 0; i < 3; i++) {
+      const a = t * 0.4 + (i * Math.PI * 2) / 3;
+      drawFeedbackAt(px + Math.cos(a) * r, py + Math.sin(a) * r, effScale * 0.62, twist + a * 0.1);
+    }
+  }
+
+  if (fx === 2) applyGlitch();
 
   // scanlines
   ctx.fillStyle = 'rgba(0,0,0,.05)';
   for (let y = 0; y < cv.height; y += 6) ctx.fillRect(0, y, cv.width, 1);
 
-  bctx.clearRect(0, 0, buf.width, buf.height);
-  bctx.drawImage(cv, 0, 0);
+  // push composite into the history ring
+  ringHead = (ringHead + 1) % RING_SIZE;
+  const dst = ring[ringHead];
+  const dctx = dst.getContext('2d');
+  dctx.clearRect(0, 0, dst.width, dst.height);
+  dctx.drawImage(cv, 0, 0, cv.width, cv.height, 0, 0, dst.width, dst.height);
 
   requestAnimationFrame(draw);
 }
 
-// controls
+// ---- capture ----
+function showToast(msg, ms = 2200) {
+  toast.textContent = msg;
+  toast.style.opacity = 1;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => (toast.style.opacity = 0), ms);
+}
+
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+document.getElementById('shotBtn').onclick = () => {
+  cv.toBlob(b => {
+    if (b) { download(b, 'recursion-' + Date.now() + '.png'); showToast('📸 SAVED'); }
+  }, 'image/png');
+};
+
+let recorder = null;
+const clipBtn = document.getElementById('clipBtn');
+clipBtn.onclick = () => {
+  if (recorder) return;
+  if (!cv.captureStream || !window.MediaRecorder) {
+    showToast('RECORDING NOT SUPPORTED — USE SCREEN RECORD');
+    return;
+  }
+  const cs = cv.captureStream(30);
+  const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+  const chunks = [];
+  recorder = new MediaRecorder(cs, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    download(new Blob(chunks, { type: 'video/webm' }), 'recursion-' + Date.now() + '.webm');
+    showToast('🎬 CLIP SAVED');
+    recorder = null;
+    clipBtn.classList.remove('recording');
+    clipBtn.textContent = '⏺ 5s';
+    recBadge.style.display = 'none';
+  };
+  recorder.start();
+  clipBtn.classList.add('recording');
+  recBadge.style.display = 'flex';
+  let left = 5;
+  clipBtn.textContent = '⏺ ' + left;
+  const iv = setInterval(() => {
+    left--;
+    if (left > 0) clipBtn.textContent = '⏺ ' + left;
+    else { clearInterval(iv); if (recorder && recorder.state === 'recording') recorder.stop(); }
+  }, 1000);
+};
+
+// ---- other controls ----
 document.getElementById('camBtn').onclick = () => {
   facing = facing === 'user' ? 'environment' : 'user';
-  if (!overlay.classList.contains('hidden') === false) startCamera();
-  else startCamera();
+  startCamera();
+};
+
+const screensBtn = document.getElementById('screensBtn');
+screensBtn.onclick = () => {
+  screens = screens === 1 ? 2 : screens === 2 ? 3 : 1;
+  screensBtn.textContent = 'SCREENS: ' + screens;
+  playIntro('SCREENS × ' + screens);
+};
+
+const delayBtn = document.getElementById('delayBtn');
+const delayModes = [
+  { label: 'DELAY: SYNC', f: 1 },
+  { label: 'DELAY: LAG', f: 5 },
+  { label: 'DELAY: TIMEWARP', f: 12 }
+];
+let di = 0;
+delayBtn.onclick = () => {
+  di = (di + 1) % delayModes.length;
+  delayFrames = delayModes[di].f;
+  delayBtn.textContent = delayModes[di].label;
 };
 
 const zoomBtn = document.getElementById('zoomBtn');
@@ -263,6 +498,7 @@ zoomBtn.onclick = () => {
   zi = (zi + 1) % zoomModes.length;
   scale = zoomModes[zi].s;
   zoomBtn.textContent = zoomModes[zi].label;
+  playIntro(zoomModes[zi].label);
 };
 
 const twistBtn = document.getElementById('twistBtn');
@@ -282,6 +518,20 @@ const tintBtn = document.getElementById('tintBtn');
 tintBtn.onclick = () => {
   tint = !tint;
   tintBtn.textContent = tint ? 'TINT: RAINBOW' : 'TINT: OFF';
+};
+
+const bezelBtn = document.getElementById('bezelBtn');
+const bezelLabels = ['BEZEL: DARK', 'BEZEL: NONE', 'BEZEL: NEON', 'BEZEL: RAINBOW'];
+bezelBtn.onclick = () => {
+  bezel = (bezel + 1) % 4;
+  bezelBtn.textContent = bezelLabels[bezel];
+};
+
+const fxBtn = document.getElementById('fxBtn');
+const fxLabels = ['FX: OFF', 'FX: ECHO', 'FX: GLITCH'];
+fxBtn.onclick = () => {
+  fx = (fx + 1) % 3;
+  fxBtn.textContent = fxLabels[fx];
 };
 </script>
 </body>
