@@ -40,7 +40,7 @@
   @keyframes blink { 50% { opacity: 0; } }
   #bootMsg {
     position: fixed;
-    top: 46%;
+    top: 44%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 13px;
@@ -52,36 +52,625 @@
     opacity: 0;
     transition: opacity .25s;
   }
-  .controls {
+  .bar {
     position: fixed;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
     left: 0; right: 0;
     display: flex;
-    gap: 6px;
+    gap: 7px;
     justify-content: center;
     flex-wrap: wrap;
     z-index: 5;
     padding: 0 10px;
   }
+  #mainBar { bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
+  #panel {
+    position: fixed;
+    left: 10px; right: 10px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
+    background: rgba(10,10,18,.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(125,249,255,.25);
+    border-radius: 18px;
+    padding: 14px;
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    z-index: 5;
+    max-height: 55vh;
+    overflow-y: auto;
+  }
+  #panel.open { display: flex; }
   button {
-    background: rgba(14,14,22,.75);
+    background: rgba(14,14,22,.8);
     backdrop-filter: blur(8px);
-    border: 1px solid rgba(125,249,255,.35);
-    color: #7df9ff;
+    border: 1.5px solid var(--c, rgba(125,249,255,.5));
+    color: var(--c, #7df9ff);
     font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 11px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--c, #7df9ff) 25%, transparent);
+    transition: transform .1s;
+  }
+  button:active { transform: scale(.9); background: color-mix(in srgb, var(--c, #7df9ff) 20%, #0a0a12); }
+  .b-shot { --c: #ffffff; font-size: 15px; padding: 9px 15px; }
+  .b-clip { --c: #ff5d7a; font-size: 13px; }
+  .b-clip.recording { animation: pulse .9s infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 22px #ff5d7a; } }
+  .b-len  { --c: #ff9d5c; }
+  .b-mic  { --c: #ffd75c; }
+  .b-flip { --c: #7dffb0; }
+  .b-mode { --c: #c07dff; }
+  .b-gear { --c: #7df9ff; font-size: 14px; }
+  .b-screens { --c: #7dffb0; }
+  .b-delay { --c: #ff9d5c; }
+  .b-twist { --c: #c07dff; }
+  .b-tint { --c: #ff5d7a; }
+  .b-bezel { --c: #ffd75c; }
+  .b-fx { --c: #7df9ff; }
+  .b-shape { --c: #ff7dde; }
+  .b-dir { --c: #9dff5c; }
+  .sliderRow {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #7df9ff;
     font-size: 10px;
     letter-spacing: 1px;
-    padding: 11px 12px;
-    border-radius: 10px;
-    cursor: pointer;
   }
-  button:active { transform: scale(.94); background: rgba(125,249,255,.15); }
-  #shotBtn, #clipBtn { border-color: rgba(255,255,255,.4); color: #fff; font-size: 14px; padding: 9px 14px; }
-  #clipBtn.recording { border-color: #ff4d4d; color: #ff4d4d; }
+  .sliderRow label { min-width: 74px; }
+  .sliderRow output { min-width: 30px; text-align: right; }
+  input[type=range] {
+    flex: 1;
+    accent-color: #7df9ff;
+    height: 26px;
+  }
   #toast {
     position: fixed;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
     left: 50%;
+    transform: translateX(-50%);
+    background: rgba(14,14,22,.85);
+    border: 1px solid rgba(125,249,255,.4);
+    color: #7df9ff;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    z-index: 7;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+    text-align: center;
+  }
+  #overlay {
+    position: fixed; inset: 0;
+    background: rgba(5,5,10,.94);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    z-index: 10; cursor: pointer;
+    text-align: center;
+    padding: 24px;
+  }
+  #overlay .icon { font-size: 44px; }
+  #overlay p { font-size: 13px; letter-spacing: 2px; color: #7df9ff; line-height: 1.7; }
+  #overlay .err { color: #ff8080; font-size: 11px; letter-spacing: 1px; max-width: 320px; line-height: 1.6; }
+  #overlay .btn {
+    border: 1px solid #7df9ff;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: #7df9ff;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+  <video id="vid" autoplay playsinline muted></video>
+  <canvas id="cv"></canvas>
+
+  <div class="title">⟳ RECURSION CAM</div>
+  <div id="recBadge"><div class="dot"></div>CLIP</div>
+  <div id="bootMsg"></div>
+  <div id="toast"></div>
+
+  <div class="bar" id="mainBar">
+    <button class="b-shot" id="shotBtn">📸</button>
+    <button class="b-clip" id="clipBtn">⏺ 5s</button>
+    <button class="b-len" id="lenBtn">LEN 5s</button>
+    <button class="b-mic" id="micBtn">🎙 OFF</button>
+    <button class="b-flip" id="camBtn">🔄 FLIP</button>
+    <button class="b-mode" id="modeBtn">🌀 LOOP</button>
+    <button class="b-gear" id="gearBtn">⚙️</button>
+  </div>
+
+  <div id="panel">
+    <div class="sliderRow">
+      <label>LOOPS</label>
+      <input type="range" id="loopsSlider" min="2" max="13" step="1" value="13">
+      <output id="loopsOut">∞</output>
+    </div>
+    <div class="sliderRow">
+      <label>DEPTH</label>
+      <input type="range" id="depthSlider" min="55" max="92" step="1" value="82">
+      <output id="depthOut">82</output>
+    </div>
+    <button class="b-dir" id="dirBtn">⇄ DIR: IN</button>
+    <button class="b-shape" id="shapeBtn">⬛ SHAPE: RECT</button>
+    <button class="b-screens" id="screensBtn">🖥 SCREENS: 1</button>
+    <button class="b-delay" id="delayBtn">⏳ DELAY: SYNC</button>
+    <button class="b-twist" id="twistBtn">🌪 TWIST: OFF</button>
+    <button class="b-tint" id="tintBtn">🌈 TINT: OFF</button>
+    <button class="b-bezel" id="bezelBtn">🖼 BEZEL: NONE</button>
+    <button class="b-fx" id="fxBtn">✨ FX: OFF</button>
+  </div>
+
+  <div id="overlay">
+    <div class="icon">📹</div>
+    <p>TAP TO START THE LOOP<br><span style="font-size:10px;color:#55c8d8">DRAG THE SCREEN TO MOVE THE TUNNEL</span></p>
+    <div class="btn" id="startBtn">START CAMERA</div>
+    <div class="err" id="errMsg"></div>
+  </div>
+
+<script>
+const vid = document.getElementById('vid');
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const overlay = document.getElementById('overlay');
+const errMsg = document.getElementById('errMsg');
+const toast = document.getElementById('toast');
+const recBadge = document.getElementById('recBadge');
+const bootMsg = document.getElementById('bootMsg');
+
+let scale = 0.82;
+let twist = 0;
+let tint = false;
+let facing = 'user';
+let stream = null;
+let micStream = null;
+let running = false;
+let noCam = false;
+let t = 0;
+let screens = 1;
+let bezel = 1;        // START WITHOUT BEZEL — 0 dark, 1 none, 2 neon, 3 rainbow
+let fx = 0;
+let delayFrames = 1;
+let loops = 13;       // 13 = infinite
+let mode = 'loop';    // 'loop' | 'plain'
+let shape = 'rect';   // 'rect' | 'circle'
+let dirOut = false;   // false = tunnel in, true = zoom out
+let soundOn = false;
+
+// frame history ring
+const RING_SIZE = 14;
+let ring = [];
+let ringHead = 0;
+function makeRing() {
+  const maxW = 860;
+  const s = Math.min(1, maxW / cv.width);
+  ring = [];
+  for (let i = 0; i < RING_SIZE; i++) {
+    const c = document.createElement('canvas');
+    c.width = Math.floor(cv.width * s);
+    c.height = Math.floor(cv.height * s);
+    ring.push(c);
+  }
+  ringHead = 0;
+}
+function pastFrame(framesAgo) {
+  const idx = (ringHead - framesAgo + RING_SIZE * 4) % RING_SIZE;
+  return ring[idx];
+}
+
+// boot sequence
+let introStart = -1;
+const INTRO_MS = 3000;
+function playIntro(label) {
+  introStart = performance.now();
+  if (label) { bootMsg.textContent = label; bootMsg.style.opacity = 1; }
+}
+function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
+
+// tunnel centre
+let cx = 0.5, cy = 0.5;
+let tx = 0.5, ty = 0.5;
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.floor(window.innerWidth * dpr);
+  cv.height = Math.floor(window.innerHeight * dpr);
+  makeRing();
+}
+resize();
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 300));
+
+// touch / drag
+function pointFromEvent(e) {
+  const p = e.touches ? e.touches[0] : e;
+  tx = p.clientX / window.innerWidth;
+  ty = p.clientY / window.innerHeight;
+}
+let dragging = false;
+cv.addEventListener('pointerdown', e => { dragging = true; pointFromEvent(e); });
+cv.addEventListener('pointermove', e => { if (dragging) pointFromEvent(e); });
+window.addEventListener('pointerup', () => { dragging = false; });
+cv.addEventListener('touchstart', e => { dragging = true; pointFromEvent(e); e.preventDefault(); }, { passive: false });
+cv.addEventListener('touchmove', e => { if (dragging) { pointFromEvent(e); e.preventDefault(); } }, { passive: false });
+window.addEventListener('touchend', () => { dragging = false; });
+
+// camera
+async function startCamera() {
+  errMsg.textContent = '';
+  if (stream) { stream.getTracks().forEach(tr => tr.stop()); stream = null; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    noCam = true;
+    errMsg.textContent = 'CAMERA API UNAVAILABLE — RUNNING SIMULATED FEED.';
+    playIntro('INITIALISING LOOP');
+    beginLoop();
+    setTimeout(() => overlay.classList.add('hidden'), 2000);
+    return;
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+    vid.srcObject = stream;
+    await vid.play();
+    noCam = false;
+    overlay.classList.add('hidden');
+    playIntro('INITIALISING LOOP');
+    beginLoop();
+  } catch (e) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      vid.srcObject = stream;
+      await vid.play();
+      noCam = false;
+      overlay.classList.add('hidden');
+      playIntro('INITIALISING LOOP');
+      beginLoop();
+    } catch (e2) {
+      noCam = true;
+      errMsg.textContent = 'CAMERA BLOCKED: ' + (e2.name || e2.message) + ' — ALLOW CAMERA IN SITE PERMISSIONS, THEN TAP START AGAIN.';
+      playIntro('INITIALISING LOOP');
+      beginLoop();
+    }
+  }
+}
+function beginLoop() {
+  if (!running) { running = true; requestAnimationFrame(draw); }
+}
+document.getElementById('startBtn').addEventListener('click', e => { e.stopPropagation(); startCamera(); });
+overlay.addEventListener('click', startCamera);
+
+// drawing
+function drawBase() {
+  if (!noCam && vid.videoWidth) {
+    const vr = vid.videoWidth / vid.videoHeight;
+    const cr = cv.width / cv.height;
+    let dw, dh;
+    if (vr > cr) { dh = cv.height; dw = dh * vr; }
+    else { dw = cv.width; dh = dw / vr; }
+    ctx.save();
+    if (fx === 1 && mode === 'loop') ctx.globalAlpha = 0.35;
+    if (facing === 'user') { ctx.translate(cv.width, 0); ctx.scale(-1, 1); }
+    ctx.drawImage(vid, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  } else {
+    const g = ctx.createLinearGradient(0, 0, cv.width, cv.height);
+    g.addColorStop(0, `hsl(${(t * 20) % 360}, 70%, 20%)`);
+    g.addColorStop(1, `hsl(${(t * 20 + 120) % 360}, 70%, 35%)`);
+    ctx.fillStyle = g;
+    if (fx === 1 && mode === 'loop') ctx.globalAlpha = 0.35;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function strokeBezel() {
+  if (bezel === 1) return;
+  const lw = Math.max(10, cv.width * 0.02);
+  if (bezel === 0) { ctx.strokeStyle = 'rgba(15,15,25,.9)'; ctx.shadowBlur = 0; }
+  else if (bezel === 2) { ctx.strokeStyle = 'rgba(125,249,255,.9)'; ctx.shadowColor = '#7df9ff'; ctx.shadowBlur = lw * 1.2; }
+  else { ctx.strokeStyle = `hsl(${(t * 80) % 360}, 100%, 60%)`; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = lw; }
+  ctx.lineWidth = bezel === 0 ? lw : lw * 0.6;
+  if (shape === 'circle') {
+    ctx.beginPath();
+    ctx.ellipse(cv.width / 2, cv.height / 2, cv.width / 2 - ctx.lineWidth / 2, cv.height / 2 - ctx.lineWidth / 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, cv.width - ctx.lineWidth, cv.height - ctx.lineWidth);
+  }
+  ctx.shadowBlur = 0;
+}
+
+function drawFeedbackAt(px, py, s, rot) {
+  const src = pastFrame(delayFrames);
+  ctx.save();
+  ctx.translate(px, py);
+  if (rot) ctx.rotate(rot);
+  ctx.scale(s, s);
+  ctx.translate(-cv.width / 2, -cv.height / 2);
+  if (shape === 'circle') {
+    ctx.beginPath();
+    ctx.ellipse(cv.width / 2, cv.height / 2, cv.width / 2, cv.height / 2, 0, 0, Math.PI * 2);
+    ctx.clip();
+  }
+  // finite loop count: fade each level so only ~N repeats are visible
+  let a = 1;
+  if (loops < 13) a = Math.pow(0.05, 1 / loops);
+  if (tint) { ctx.filter = 'hue-rotate(18deg) saturate(1.15)'; a = Math.min(a, 0.96); }
+  ctx.globalAlpha = a;
+  ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, cv.width, cv.height);
+  ctx.filter = 'none';
+  ctx.globalAlpha = 1;
+  strokeBezel();
+  ctx.restore();
+}
+
+function applyGlitch() {
+  if (Math.sin(t * 2.7) > 0.93) {
+    const bands = 4 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < bands; i++) {
+      const y = Math.random() * cv.height;
+      const h = 6 + Math.random() * 30;
+      const off = (Math.random() - 0.5) * cv.width * 0.12;
+      const slice = ctx.getImageData(0, y, cv.width, h);
+      ctx.putImageData(slice, off, y);
+    }
+  }
+}
+
+function draw() {
+  t += 0.016;
+  cx += (tx - cx) * 0.12;
+  cy += (ty - cy) * 0.12;
+
+  let effScale = scale;
+  if (introStart > 0) {
+    const p = Math.min(1, (performance.now() - introStart) / INTRO_MS);
+    effScale = scale * easeOutCubic(p);
+    const level = Math.floor(p * 12);
+    bootMsg.textContent = p < 1 ? 'LOOP DEPTH ' + String(level).padStart(2, '0') : '';
+    if (p >= 1) { introStart = -1; bootMsg.style.opacity = 0; }
+  }
+  if (dirOut) effScale = 1 / Math.max(0.4, effScale); // reverse: recursion explodes outward
+
+  drawBase();
+
+  if (mode === 'loop') {
+    const px = cx * cv.width;
+    const py = cy * cv.height;
+    if (screens === 1) {
+      drawFeedbackAt(px, py, effScale, twist);
+    } else if (screens === 2) {
+      drawFeedbackAt(px, py, effScale * (dirOut ? 1 : 0.8), twist);
+      drawFeedbackAt(cv.width - px, cv.height - py, effScale * (dirOut ? 1 : 0.8), -twist);
+    } else {
+      const r = Math.min(cv.width, cv.height) * 0.22;
+      for (let i = 0; i < 3; i++) {
+        const a = t * 0.4 + (i * Math.PI * 2) / 3;
+        drawFeedbackAt(px + Math.cos(a) * r, py + Math.sin(a) * r, effScale * (dirOut ? 1 : 0.62), twist + a * 0.1);
+      }
+    }
+    if (fx === 2) applyGlitch();
+    // scanlines only in loop mode
+    ctx.fillStyle = 'rgba(0,0,0,.05)';
+    for (let y = 0; y < cv.height; y += 6) ctx.fillRect(0, y, cv.width, 1);
+  }
+
+  // push composite into history ring
+  ringHead = (ringHead + 1) % RING_SIZE;
+  const dst = ring[ringHead];
+  const dctx = dst.getContext('2d');
+  dctx.clearRect(0, 0, dst.width, dst.height);
+  dctx.drawImage(cv, 0, 0, cv.width, cv.height, 0, 0, dst.width, dst.height);
+
+  requestAnimationFrame(draw);
+}
+
+// capture
+function showToast(msg, ms = 2200) {
+  toast.textContent = msg;
+  toast.style.opacity = 1;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => (toast.style.opacity = 0), ms);
+}
+function download(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+document.getElementById('shotBtn').onclick = () => {
+  cv.toBlob(b => {
+    if (b) { download(b, 'recursion-' + Date.now() + '.png'); showToast('📸 SAVED'); }
+  }, 'image/png');
+};
+
+// clip length + sound
+const lenModes = [5, 15, 30, 0]; // 0 = manual
+let li = 0;
+const lenBtn = document.getElementById('lenBtn');
+lenBtn.onclick = () => {
+  li = (li + 1) % lenModes.length;
+  lenBtn.textContent = 'LEN ' + (lenModes[li] === 0 ? '∞' : lenModes[li] + 's');
+  if (!recorder) clipBtn.textContent = '⏺ ' + (lenModes[li] === 0 ? 'REC' : lenModes[li] + 's');
+};
+
+const micBtn = document.getElementById('micBtn');
+micBtn.onclick = async () => {
+  if (!soundOn) {
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      soundOn = true;
+      micBtn.textContent = '🎙 ON';
+      showToast('MIC READY — CLIPS WILL HAVE SOUND');
+    } catch (e) {
+      showToast('MIC BLOCKED — ALLOW IN PERMISSIONS');
+    }
+  } else {
+    if (micStream) { micStream.getTracks().forEach(tr => tr.stop()); micStream = null; }
+    soundOn = false;
+    micBtn.textContent = '🎙 OFF';
+  }
+};
+
+let recorder = null;
+const clipBtn = document.getElementById('clipBtn');
+let clipTimer = null;
+clipBtn.onclick = () => {
+  // manual stop
+  if (recorder && recorder.state === 'recording') {
+    if (lenModes[li] === 0) { recorder.stop(); if (clipTimer) clearInterval(clipTimer); }
+    return;
+  }
+  if (!cv.captureStream || !window.MediaRecorder) {
+    showToast('RECORDING NOT SUPPORTED — USE SCREEN RECORD');
+    return;
+  }
+  const cs = cv.captureStream(30);
+  if (soundOn && micStream) {
+    micStream.getAudioTracks().forEach(tr => cs.addTrack(tr));
+  }
+  const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus'
+    : MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+  const chunks = [];
+  recorder = new MediaRecorder(cs, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
+  recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    download(new Blob(chunks, { type: 'video/webm' }), 'recursion-' + Date.now() + '.webm');
+    showToast('🎬 CLIP SAVED' + (soundOn ? ' (WITH SOUND)' : ''));
+    recorder = null;
+    clipBtn.classList.remove('recording');
+    clipBtn.textContent = '⏺ ' + (lenModes[li] === 0 ? 'REC' : lenModes[li] + 's');
+    recBadge.style.display = 'none';
+  };
+  recorder.start();
+  clipBtn.classList.add('recording');
+  recBadge.style.display = 'flex';
+  const total = lenModes[li];
+  if (total === 0) {
+    clipBtn.textContent = '⏹ STOP';
+  } else {
+    let left = total;
+    clipBtn.textContent = '⏺ ' + left;
+    clipTimer = setInterval(() => {
+      left--;
+      if (left > 0) clipBtn.textContent = '⏺ ' + left;
+      else { clearInterval(clipTimer); if (recorder && recorder.state === 'recording') recorder.stop(); }
+    }, 1000);
+  }
+};
+
+// main controls
+document.getElementById('camBtn').onclick = () => {
+  facing = facing === 'user' ? 'environment' : 'user';
+  startCamera();
+};
+
+const modeBtn = document.getElementById('modeBtn');
+modeBtn.onclick = () => {
+  mode = mode === 'loop' ? 'plain' : 'loop';
+  modeBtn.textContent = mode === 'loop' ? '🌀 LOOP' : '📷 PLAIN';
+  showToast(mode === 'loop' ? 'RECURSION ON' : 'NORMAL CAMERA MODE');
+  if (mode === 'loop') playIntro('LOOP RESTORED');
+};
+
+const panel = document.getElementById('panel');
+document.getElementById('gearBtn').onclick = () => panel.classList.toggle('open');
+
+// panel controls
+const loopsSlider = document.getElementById('loopsSlider');
+const loopsOut = document.getElementById('loopsOut');
+loopsSlider.oninput = () => {
+  loops = parseInt(loopsSlider.value);
+  loopsOut.textContent = loops >= 13 ? '∞' : loops;
+};
+
+const depthSlider = document.getElementById('depthSlider');
+const depthOut = document.getElementById('depthOut');
+depthSlider.oninput = () => {
+  scale = parseInt(depthSlider.value) / 100;
+  depthOut.textContent = depthSlider.value;
+};
+
+const dirBtn = document.getElementById('dirBtn');
+dirBtn.onclick = () => {
+  dirOut = !dirOut;
+  dirBtn.textContent = dirOut ? '⇄ DIR: OUT' : '⇄ DIR: IN';
+  playIntro(dirOut ? 'REVERSING LOOP' : 'TUNNEL MODE');
+};
+
+const shapeBtn = document.getElementById('shapeBtn');
+shapeBtn.onclick = () => {
+  shape = shape === 'rect' ? 'circle' : 'rect';
+  shapeBtn.textContent = shape === 'rect' ? '⬛ SHAPE: RECT' : '⚫ SHAPE: CIRCLE';
+};
+
+const screensBtn = document.getElementById('screensBtn');
+screensBtn.onclick = () => {
+  screens = screens === 1 ? 2 : screens === 2 ? 3 : 1;
+  screensBtn.textContent = '🖥 SCREENS: ' + screens;
+  playIntro('SCREENS × ' + screens);
+};
+
+const delayBtn = document.getElementById('delayBtn');
+const delayModes = [
+  { label: '⏳ DELAY: SYNC', f: 1 },
+  { label: '⏳ DELAY: LAG', f: 5 },
+  { label: '⏳ DELAY: TIMEWARP', f: 12 }
+];
+let di = 0;
+delayBtn.onclick = () => {
+  di = (di + 1) % delayModes.length;
+  delayFrames = delayModes[di].f;
+  delayBtn.textContent = delayModes[di].label;
+};
+
+const twistBtn = document.getElementById('twistBtn');
+const twistModes = [
+  { label: '🌪 TWIST: OFF', r: 0 },
+  { label: '🌪 TWIST: GENTLE', r: 0.05 },
+  { label: '🌪 TWIST: VORTEX', r: 0.15 }
+];
+let ti = 0;
+twistBtn.onclick = () => {
+  ti = (ti + 1) % twistModes.length;
+  twist = twistModes[ti].r;
+  twistBtn.textContent = twistModes[ti].label;
+};
+
+const tintBtn = document.getElementById('tintBtn');
+tintBtn.onclick = () => {
+  tint = !tint;
+  tintBtn.textContent = tint ? '🌈 TINT: RAINBOW' : '🌈 TINT: OFF';
+};
+
+const bezelBtn = document.getElementById('bezelBtn');
+const bezelLabels = ['🖼 BEZEL: DARK', '🖼 BEZEL: NONE', '🖼 BEZEL: NEON', '🖼 BEZEL: RAINBOW'];
+bezelBtn.onclick = () => {
+  bezel = (bezel + 1) % 4;
+  bezelBtn.textContent = bezelLabels[bezel];
+};
+
+const fxBtn = document.getElementById('fxBtn');
+const fxLabels = ['✨ FX: OFF', '✨ FX: ECHO', '✨ FX: GLITCH'];
+fxBtn.onclick = () => {
+  fx = (fx + 1) % 3;
+  fxBtn.textContent = fxLabels[fx];
+};
+</script>
+</body>
+</html>    left: 50%;
     transform: translateX(-50%);
     background: rgba(14,14,22,.85);
     border: 1px solid rgba(125,249,255,.4);
