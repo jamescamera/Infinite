@@ -3,182 +3,293 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<title>Infinite Recursion Camera</title>
+<title>Recursion Cam 95</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-  body { font-family: 'Courier New', monospace; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Courier New', monospace;
+    background: var(--body, #f3c6cd);
+    transition: background .4s;
+    display: flex;
+    flex-direction: column;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  }
   video { display: none; }
-  #cv { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; }
-  .title {
-    position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 14px);
-    right: 16px;
+
+  /* ---- LCD status strip ---- */
+  #lcd {
+    background: #9db89a;
+    border-radius: 8px;
+    box-shadow: inset 2px 2px 6px rgba(0,0,0,.35), inset -1px -1px 2px rgba(255,255,255,.4);
+    color: #26352a;
     font-size: 11px;
-    letter-spacing: 3px;
-    color: #7df9ff;
-    text-shadow: 0 0 10px rgba(125,249,255,.5);
-    z-index: 5;
-    pointer-events: none;
+    letter-spacing: 2px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-transform: uppercase;
   }
-  #recBadge {
-    position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 14px);
-    left: 16px;
+
+  /* ---- viewfinder ---- */
+  #finder {
+    flex: 1;
+    min-height: 0;
+    background: #17171d;
+    border-radius: 26px;
+    padding: 10px;
+    box-shadow:
+      8px 8px 20px rgba(0,0,0,.25),
+      -6px -6px 16px rgba(255,255,255,.55),
+      inset 0 0 0 3px #0a0a0e;
+    position: relative;
+  }
+  #finderInner {
+    width: 100%;
+    height: 100%;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+    box-shadow: inset 0 4px 14px rgba(0,0,0,.9);
+  }
+  #cv { width: 100%; height: 100%; display: block; touch-action: none; }
+  #recDot {
+    position: absolute;
+    top: 10px; left: 12px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #ff3b30;
+    box-shadow: 0 0 10px #ff3b30;
     display: none;
-    align-items: center; gap: 6px;
-    font-size: 12px; letter-spacing: 2px; color: #ff4d4d;
-    z-index: 5;
-    pointer-events: none;
+    animation: blink 1s steps(1) infinite;
+    z-index: 3;
   }
-  #recBadge .dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: #ff4d4d;
-    animation: blink 1.1s steps(1) infinite;
-  }
-  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes blink { 50% { opacity: .15; } }
   #bootMsg {
-    position: fixed;
-    top: 44%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 13px;
-    letter-spacing: 4px;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: #7df9ff;
-    text-shadow: 0 0 14px rgba(125,249,255,.8);
-    z-index: 5;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-shadow: 0 0 12px rgba(125,249,255,.8);
     pointer-events: none;
     opacity: 0;
     transition: opacity .25s;
+    z-index: 3;
   }
-  .bar {
-    position: fixed;
-    left: 0; right: 0;
+  #overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5,5,10,.94);
     display: flex;
-    gap: 7px;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    flex-wrap: wrap;
+    gap: 14px;
     z-index: 5;
-    padding: 0 10px;
-  }
-  #mainBar { bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
-  #panel {
-    position: fixed;
-    left: 10px; right: 10px;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 74px);
-    background: rgba(10,10,18,.92);
-    border: 1px solid rgba(125,249,255,.25);
+    text-align: center;
+    padding: 20px;
     border-radius: 18px;
-    padding: 14px;
-    display: none;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    z-index: 5;
-    max-height: 55vh;
-    overflow-y: auto;
-  }
-  #panel.open { display: flex; }
-  button {
-    background: rgba(14,14,22,.85);
-    border: 1.5px solid #7df9ff;
-    color: #7df9ff;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    letter-spacing: 1px;
-    padding: 11px 13px;
-    border-radius: 999px;
     cursor: pointer;
   }
-  button:active { transform: scale(.9); }
-  .b-shot { border-color: #ffffff; color: #ffffff; font-size: 15px; padding: 9px 15px; }
-  .b-clip { border-color: #ff5d7a; color: #ff5d7a; font-size: 13px; }
-  .b-clip.recording { animation: pulse .9s infinite; }
-  @keyframes pulse { 50% { box-shadow: 0 0 22px #ff5d7a; } }
-  .b-len  { border-color: #ff9d5c; color: #ff9d5c; }
-  .b-mic  { border-color: #ffd75c; color: #ffd75c; }
-  .b-flip { border-color: #7dffb0; color: #7dffb0; }
-  .b-mode { border-color: #c07dff; color: #c07dff; }
-  .b-screens { border-color: #7dffb0; color: #7dffb0; }
-  .b-delay { border-color: #ff9d5c; color: #ff9d5c; }
-  .b-twist { border-color: #c07dff; color: #c07dff; }
-  .b-tint { border-color: #ff5d7a; color: #ff5d7a; }
-  .b-bezel { border-color: #ffd75c; color: #ffd75c; }
-  .b-shape { border-color: #ff7dde; color: #ff7dde; }
-  .b-dir { border-color: #9dff5c; color: #9dff5c; }
+  #overlay .icon { font-size: 40px; }
+  #overlay p { color: #7df9ff; font-size: 12px; letter-spacing: 2px; line-height: 1.7; }
+  #overlay .err { color: #ff8f8f; font-size: 10px; max-width: 300px; line-height: 1.6; letter-spacing: 1px; }
+  #overlay .btn {
+    border: 1px solid #7df9ff;
+    color: #7df9ff;
+    padding: 13px 26px;
+    border-radius: 12px;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  /* ---- control deck ---- */
+  #deck {
+    padding-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .key {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(145deg, #ffffff, #dcdcdc);
+    box-shadow: 5px 5px 12px rgba(0,0,0,.22), -4px -4px 10px rgba(255,255,255,.8);
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #55555f;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: box-shadow .08s, transform .08s;
+  }
+  .key:active, .key.pressed {
+    box-shadow: inset 4px 4px 10px rgba(0,0,0,.25), inset -3px -3px 8px rgba(255,255,255,.7);
+    transform: scale(.96);
+  }
+  .key.on { color: #0c8f6f; text-shadow: 0 0 6px rgba(12,143,111,.4); }
+  #shutter {
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    border: none;
+    background: radial-gradient(circle at 35% 30%, #3a3a44, #101014 70%);
+    box-shadow: 6px 6px 16px rgba(0,0,0,.35), -4px -4px 10px rgba(255,255,255,.6), inset 0 0 0 4px #26262e;
+    color: #fff;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform .08s, box-shadow .08s;
+  }
+  #shutter:active { transform: scale(.93); box-shadow: inset 5px 5px 14px rgba(0,0,0,.7); }
+  #recKey {
+    width: 60px;
+    height: 60px;
+    font-size: 20px;
+    color: #d23b4e;
+  }
+  #recKey.recording {
+    background: linear-gradient(145deg, #ff6b7d, #d23b4e);
+    color: #fff;
+    box-shadow: inset 4px 4px 10px rgba(120,10,25,.6), 0 0 18px rgba(255,60,90,.6);
+  }
+
+  /* ---- settings tray ---- */
+  #tray {
+    position: fixed;
+    left: 10px; right: 10px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    background: linear-gradient(160deg, #fbfbfd, #e3e3ea);
+    border-radius: 24px;
+    box-shadow: 0 -8px 30px rgba(0,0,0,.35), inset 0 2px 0 rgba(255,255,255,.9);
+    padding: 16px 16px 18px;
+    z-index: 8;
+    transform: translateY(115%);
+    transition: transform .28s cubic-bezier(.2,.9,.3,1.1);
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  #tray.open { transform: translateY(0); }
+  #tray h3 {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #7a7a88;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .trayGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .chip {
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #ffffff, #dfdfe6);
+    box-shadow: 4px 4px 10px rgba(0,0,0,.15), -3px -3px 8px rgba(255,255,255,.9);
+    padding: 11px 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #55555f;
+    text-align: center;
+    cursor: pointer;
+    line-height: 1.5;
+  }
+  .chip:active { box-shadow: inset 3px 3px 8px rgba(0,0,0,.2), inset -2px -2px 6px rgba(255,255,255,.8); }
+  .chip b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .chip.on { color: #0c8f6f; }
   .sliderRow {
-    width: 100%;
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #7df9ff;
+    margin-top: 10px;
+    color: #55555f;
     font-size: 10px;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
   }
-  .sliderRow label { min-width: 74px; }
-  .sliderRow output { min-width: 30px; text-align: right; }
-  input[type=range] { flex: 1; accent-color: #7df9ff; height: 26px; }
+  .sliderRow label { min-width: 58px; }
+  .sliderRow output { min-width: 28px; text-align: right; font-size: 12px; }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 14px;
+    border-radius: 8px;
+    background: #d5d5de;
+    box-shadow: inset 2px 2px 6px rgba(0,0,0,.25), inset -1px -1px 3px rgba(255,255,255,.8);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #ffffff, #d8d8e0);
+    box-shadow: 3px 3px 8px rgba(0,0,0,.3), -2px -2px 6px rgba(255,255,255,.9), inset 0 0 0 2px rgba(0,0,0,.06);
+    cursor: pointer;
+  }
   #toast {
     position: fixed;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+    top: calc(env(safe-area-inset-top, 0px) + 54px);
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(14,14,22,.9);
-    border: 1px solid rgba(125,249,255,.4);
+    background: rgba(20,20,28,.92);
     color: #7df9ff;
-    font-size: 11px;
-    letter-spacing: 1px;
+    font-size: 10px;
+    letter-spacing: 2px;
     padding: 10px 16px;
-    border-radius: 10px;
-    z-index: 7;
+    border-radius: 999px;
+    z-index: 9;
     opacity: 0;
     transition: opacity .3s;
     pointer-events: none;
     text-align: center;
+    max-width: 88vw;
   }
-  #overlay {
-    position: fixed; inset: 0;
-    background: rgba(5,5,10,.96);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 16px;
-    z-index: 10; cursor: pointer;
-    text-align: center;
-    padding: 24px;
-  }
-  #overlay .icon { font-size: 44px; }
-  #overlay p { font-size: 13px; letter-spacing: 2px; color: #7df9ff; line-height: 1.7; }
-  #overlay .err { color: #ff8080; font-size: 11px; letter-spacing: 1px; max-width: 320px; line-height: 1.6; }
-  #overlay .btn {
-    border: 1px solid #7df9ff;
-    padding: 14px 28px;
-    border-radius: 12px;
-    font-size: 13px;
-    letter-spacing: 2px;
-    color: #7df9ff;
-  }
-  .hidden { display: none !important; }
 </style>
 </head>
 <body>
   <video id="vid" autoplay playsinline muted></video>
-  <canvas id="cv"></canvas>
 
-  <div class="title" id="titleTag">&#10227; RECURSION CAM v4</div>
-  <div id="recBadge"><div class="dot"></div>CLIP</div>
-  <div id="bootMsg"></div>
-  <div id="toast"></div>
+  <div id="lcd">RECURSION CAM 95 &#9679; READY</div>
 
-  <div class="bar" id="mainBar">
-    <button class="b-shot" id="shotBtn">&#128248;</button>
-    <button class="b-clip" id="clipBtn">&#9210; 5s</button>
-    <button class="b-len" id="lenBtn">LEN 5s</button>
-    <button class="b-mic" id="micBtn">&#127908; OFF</button>
-    <button class="b-flip" id="camBtn">FLIP</button>
-    <button class="b-mode" id="modeBtn">LOOP</button>
-    <button id="gearBtn">&#9881;</button>
+  <div id="finder">
+    <div id="finderInner">
+      <canvas id="cv"></canvas>
+      <div id="recDot"></div>
+      <div id="bootMsg"></div>
+      <div id="overlay">
+        <div class="icon">&#128247;</div>
+        <p>RECURSION CAM 95<br><span style="font-size:10px;color:#55c8d8">TAP START &#8226; DRAG TO MOVE THE TUNNEL</span></p>
+        <div class="btn" id="startBtn">START CAMERA</div>
+        <div class="err" id="errMsg"></div>
+      </div>
+    </div>
   </div>
 
-  <div id="panel">
+  <div id="deck">
+    <button class="key" id="micKey">&#127908;</button>
+    <button class="key" id="flipKey">&#8635;</button>
+    <button id="shutter">&#128444;</button>
+    <button class="key" id="recKey">&#9679;</button>
+    <button class="key" id="gearKey">&#9881;</button>
+  </div>
+
+  <div id="tray">
+    <h3>&#9670; LOOP LAB &#9670;</h3>
     <div class="sliderRow">
       <label>LOOPS</label>
       <input type="range" id="loopsSlider" min="2" max="13" step="1" value="13">
@@ -189,44 +300,42 @@
       <input type="range" id="depthSlider" min="55" max="92" step="1" value="82">
       <output id="depthOut">82</output>
     </div>
-    <button class="b-dir" id="dirBtn">DIR: IN</button>
-    <button class="b-shape" id="shapeBtn">SHAPE: RECT</button>
-    <button class="b-screens" id="screensBtn">SCREENS: 1</button>
-    <button class="b-delay" id="delayBtn">DELAY: SYNC</button>
-    <button class="b-twist" id="twistBtn">TWIST: OFF</button>
-    <button class="b-tint" id="tintBtn">TINT: OFF</button>
-    <button class="b-bezel" id="bezelBtn">BEZEL: NONE</button>
-    <button class="b-fx" id="fxBtn">FX: OFF</button>
+    <div class="sliderRow">
+      <label>TWIST</label>
+      <input type="range" id="twistSlider" min="0" max="20" step="1" value="0">
+      <output id="twistOut">0</output>
+    </div>
+    <div class="trayGrid">
+      <button class="chip" id="modeChip"><b>&#127744;</b>LOOP</button>
+      <button class="chip" id="screensChip"><b>&#128421;</b>SCREENS 1</button>
+      <button class="chip" id="delayChip"><b>&#8987;</b>SYNC</button>
+      <button class="chip" id="dirChip"><b>&#8646;</b>DIR IN</button>
+      <button class="chip" id="shapeChip"><b>&#11035;</b>RECT</button>
+      <button class="chip" id="bezelChip"><b>&#128444;</b>NO BEZEL</button>
+      <button class="chip" id="tintChip"><b>&#127752;</b>TINT OFF</button>
+      <button class="chip" id="fxChip"><b>&#10024;</b>FX OFF</button>
+      <button class="chip" id="bodyChip"><b>&#127912;</b>BODY</button>
+    </div>
   </div>
 
-  <div id="overlay">
-    <div class="icon">&#128249;</div>
-    <p>TAP TO START THE LOOP<br><span style="font-size:10px;color:#55c8d8">DRAG THE SCREEN TO MOVE THE TUNNEL</span></p>
-    <div class="btn" id="startBtn">START CAMERA</div>
-    <div class="err" id="errMsg"></div>
-  </div>
+  <div id="toast"></div>
 
 <script>
 window.onerror = function (msg, src, line) {
-  var box = document.getElementById('errBox');
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'errBox';
-    box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99;background:#7a1020;color:#fff;font:11px Courier New;padding:10px 14px;letter-spacing:1px;';
-    document.body.appendChild(box);
-  }
-  box.textContent = 'JS ERROR (line ' + line + '): ' + msg;
+  var lcd = document.getElementById('lcd');
+  if (lcd) lcd.textContent = 'ERR L' + line + ': ' + msg;
 };
 
 var vid = document.getElementById('vid');
 var cv = document.getElementById('cv');
 var ctx = cv.getContext('2d');
+var finderInner = document.getElementById('finderInner');
 var overlay = document.getElementById('overlay');
 var errMsg = document.getElementById('errMsg');
 var toast = document.getElementById('toast');
-var recBadge = document.getElementById('recBadge');
+var recDot = document.getElementById('recDot');
 var bootMsg = document.getElementById('bootMsg');
-var clipBtn = document.getElementById('clipBtn');
+var lcd = document.getElementById('lcd');
 
 var scale = 0.82;
 var twist = 0;
@@ -247,8 +356,27 @@ var shape = 'rect';
 var dirOut = false;
 var soundOn = false;
 var recorder = null;
-var clipTimer = null;
 
+function setLCD(msg) { lcd.textContent = msg; }
+
+// ---- tiny 90s click sound ----
+var audioCtx = null;
+function clickSound(freq) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    o.type = 'square';
+    o.frequency.value = freq || 620;
+    g.gain.setValueAtTime(0.06, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + 0.08);
+  } catch (e) {}
+}
+
+// ---- frame history ring ----
 var RING_SIZE = 14;
 var ring = [];
 var ringHead = 0;
@@ -258,8 +386,8 @@ function makeRing() {
   ring = [];
   for (var i = 0; i < RING_SIZE; i++) {
     var c = document.createElement('canvas');
-    c.width = Math.floor(cv.width * s);
-    c.height = Math.floor(cv.height * s);
+    c.width = Math.max(2, Math.floor(cv.width * s));
+    c.height = Math.max(2, Math.floor(cv.height * s));
     ring.push(c);
   }
   ringHead = 0;
@@ -282,18 +410,20 @@ var tx = 0.5, ty = 0.5;
 
 function resize() {
   var dpr = Math.min(window.devicePixelRatio || 1, 2);
-  cv.width = Math.floor(window.innerWidth * dpr);
-  cv.height = Math.floor(window.innerHeight * dpr);
+  var rect = finderInner.getBoundingClientRect();
+  cv.width = Math.max(2, Math.floor(rect.width * dpr));
+  cv.height = Math.max(2, Math.floor(rect.height * dpr));
   makeRing();
 }
-resize();
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', function () { setTimeout(resize, 300); });
+setTimeout(resize, 50);
 
 function pointFromEvent(e) {
   var p = e.touches ? e.touches[0] : e;
-  tx = p.clientX / window.innerWidth;
-  ty = p.clientY / window.innerHeight;
+  var rect = finderInner.getBoundingClientRect();
+  tx = (p.clientX - rect.left) / rect.width;
+  ty = (p.clientY - rect.top) / rect.height;
 }
 var dragging = false;
 cv.addEventListener('pointerdown', function (e) { dragging = true; pointFromEvent(e); });
@@ -305,6 +435,7 @@ window.addEventListener('touchend', function () { dragging = false; });
 
 function startCamera() {
   errMsg.textContent = '';
+  resize();
   if (stream) { stream.getTracks().forEach(function (tr) { tr.stop(); }); stream = null; }
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -312,32 +443,26 @@ function startCamera() {
     errMsg.textContent = 'CAMERA API UNAVAILABLE - RUNNING SIMULATED FEED.';
     playIntro('INITIALISING LOOP');
     beginLoop();
-    setTimeout(function () { overlay.classList.add('hidden'); }, 2000);
+    setTimeout(function () { overlay.style.display = 'none'; }, 2000);
     return;
   }
   navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false })
-    .then(function (s) {
-      stream = s;
-      vid.srcObject = s;
-      return vid.play();
-    })
+    .then(function (s) { stream = s; vid.srcObject = s; return vid.play(); })
     .then(function () {
       noCam = false;
-      overlay.classList.add('hidden');
+      overlay.style.display = 'none';
       playIntro('INITIALISING LOOP');
+      setLCD('RECURSION CAM 95 \u25CF LIVE');
       beginLoop();
     })
     .catch(function () {
       navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        .then(function (s) {
-          stream = s;
-          vid.srcObject = s;
-          return vid.play();
-        })
+        .then(function (s) { stream = s; vid.srcObject = s; return vid.play(); })
         .then(function () {
           noCam = false;
-          overlay.classList.add('hidden');
+          overlay.style.display = 'none';
           playIntro('INITIALISING LOOP');
+          setLCD('RECURSION CAM 95 \u25CF LIVE');
           beginLoop();
         })
         .catch(function (e2) {
@@ -352,13 +477,8 @@ function beginLoop() {
   if (!running) { running = true; requestAnimationFrame(draw); }
 }
 var startBtn = document.getElementById('startBtn');
-startBtn.addEventListener('click', function (e) { e.stopPropagation(); startCamera(); });
-startBtn.addEventListener('touchend', function (e) { e.stopPropagation(); e.preventDefault(); startCamera(); });
-overlay.addEventListener('click', startCamera);
-overlay.addEventListener('touchend', function (e) { e.preventDefault(); startCamera(); });
-
-// script-loaded confirmation: if you can see the check mark, JS is alive
-document.getElementById('titleTag').textContent = '\u27F3 RECURSION CAM v4 \u2713';
+startBtn.addEventListener('click', function (e) { e.stopPropagation(); clickSound(760); startCamera(); });
+overlay.addEventListener('click', function () { clickSound(760); startCamera(); });
 
 function drawBase() {
   if (!noCam && vid.videoWidth) {
@@ -386,7 +506,7 @@ function drawBase() {
 
 function strokeBezel() {
   if (bezel === 1) return;
-  var lw = Math.max(10, cv.width * 0.02);
+  var lw = Math.max(8, cv.width * 0.02);
   if (bezel === 0) { ctx.strokeStyle = 'rgba(15,15,25,.9)'; ctx.shadowBlur = 0; }
   else if (bezel === 2) { ctx.strokeStyle = 'rgba(125,249,255,.9)'; ctx.shadowColor = '#7df9ff'; ctx.shadowBlur = lw * 1.2; }
   else { ctx.strokeStyle = 'hsl(' + ((t * 80) % 360) + ', 100%, 60%)'; ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = lw; }
@@ -476,9 +596,11 @@ function draw() {
 
   ringHead = (ringHead + 1) % RING_SIZE;
   var dst = ring[ringHead];
-  var dctx = dst.getContext('2d');
-  dctx.clearRect(0, 0, dst.width, dst.height);
-  dctx.drawImage(cv, 0, 0, cv.width, cv.height, 0, 0, dst.width, dst.height);
+  if (dst) {
+    var dctx = dst.getContext('2d');
+    dctx.clearRect(0, 0, dst.width, dst.height);
+    dctx.drawImage(cv, 0, 0, cv.width, cv.height, 0, 0, dst.width, dst.height);
+  }
 
   requestAnimationFrame(draw);
 }
@@ -498,53 +620,53 @@ function download(blob, name) {
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 
-document.getElementById('shotBtn').onclick = function () {
+// ---- shutter (photo) ----
+document.getElementById('shutter').onclick = function () {
+  clickSound(980);
+  // flash effect
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.fillRect(0, 0, cv.width, cv.height);
   cv.toBlob(function (b) {
-    if (b) { download(b, 'recursion-' + Date.now() + '.png'); showToast('SNAP SAVED'); }
+    if (b) { download(b, 'recursion-' + Date.now() + '.png'); setLCD('PHOTO SAVED \u25CF NICE'); }
   }, 'image/png');
 };
 
-var lenModes = [5, 15, 30, 0];
-var li = 0;
-var lenBtn = document.getElementById('lenBtn');
-lenBtn.onclick = function () {
-  li = (li + 1) % lenModes.length;
-  lenBtn.textContent = 'LEN ' + (lenModes[li] === 0 ? 'MANUAL' : lenModes[li] + 's');
-  if (!recorder) clipBtn.innerHTML = '&#9210; ' + (lenModes[li] === 0 ? 'REC' : lenModes[li] + 's');
-};
-
-var micBtn = document.getElementById('micBtn');
-micBtn.onclick = function () {
-  if (!soundOn) {
-    navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-      .then(function (s) {
-        micStream = s;
-        soundOn = true;
-        micBtn.innerHTML = '&#127908; ON';
-        showToast('MIC READY - CLIPS WILL HAVE SOUND');
-      })
-      .catch(function () { showToast('MIC BLOCKED - ALLOW IN PERMISSIONS'); });
-  } else {
+// ---- mic ----
+var micKey = document.getElementById('micKey');
+function requestMic(onOk) {
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(function (s) {
+      micStream = s;
+      soundOn = true;
+      micKey.classList.add('on');
+      setLCD('MIC ON \u25CF CLIPS WILL HAVE SOUND');
+      if (onOk) onOk();
+    })
+    .catch(function (err) {
+      soundOn = false;
+      micKey.classList.remove('on');
+      showToast('MIC FAILED: ' + (err.name || err.message) + ' - CHECK SITE PERMISSIONS');
+      if (onOk) onOk();
+    });
+}
+micKey.onclick = function () {
+  clickSound(520);
+  if (!soundOn) requestMic();
+  else {
     if (micStream) { micStream.getTracks().forEach(function (tr) { tr.stop(); }); micStream = null; }
     soundOn = false;
-    micBtn.innerHTML = '&#127908; OFF';
+    micKey.classList.remove('on');
+    setLCD('MIC OFF');
   }
 };
 
-clipBtn.onclick = function () {
-  if (recorder && recorder.state === 'recording') {
-    if (lenModes[li] === 0) { recorder.stop(); if (clipTimer) clearInterval(clipTimer); }
-    return;
-  }
-  if (!cv.captureStream || !window.MediaRecorder) {
-    showToast('RECORDING NOT SUPPORTED - USE SCREEN RECORD');
-    return;
-  }
+// ---- record: simple toggle ----
+var recKey = document.getElementById('recKey');
+function beginRecording() {
   var cs = cv.captureStream(30);
   if (soundOn && micStream) {
     micStream.getAudioTracks().forEach(function (tr) { cs.addTrack(tr); });
   }
-  // pick a mime type this browser actually supports (Safari = mp4, Chrome = webm)
   var mime = '';
   var candidates = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp9', 'video/webm', 'video/mp4'];
   if (MediaRecorder.isTypeSupported) {
@@ -554,55 +676,52 @@ clipBtn.onclick = function () {
   }
   var chunks = [];
   try {
-    recorder = mime
-      ? new MediaRecorder(cs, { mimeType: mime, videoBitsPerSecond: 5000000 })
-      : new MediaRecorder(cs);
-  } catch (recErr) {
+    recorder = mime ? new MediaRecorder(cs, { mimeType: mime, videoBitsPerSecond: 5000000 }) : new MediaRecorder(cs);
+  } catch (e) {
     try { recorder = new MediaRecorder(cs); }
-    catch (recErr2) { recorder = null; showToast('RECORDING NOT SUPPORTED ON THIS DEVICE - USE SCREEN RECORD'); return; }
+    catch (e2) { recorder = null; showToast('RECORDING NOT SUPPORTED - USE SCREEN RECORD'); return; }
   }
   var ext = (recorder.mimeType && recorder.mimeType.indexOf('mp4') > -1) ? 'mp4' : 'webm';
   recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
   recorder.onstop = function () {
     download(new Blob(chunks, { type: 'video/' + ext }), 'recursion-' + Date.now() + '.' + ext);
-    showToast('CLIP SAVED' + (soundOn ? ' (WITH SOUND)' : ''));
+    setLCD('CLIP SAVED' + (soundOn ? ' \u25CF WITH SOUND' : ''));
     recorder = null;
-    clipBtn.classList.remove('recording');
-    clipBtn.innerHTML = '&#9210; ' + (lenModes[li] === 0 ? 'REC' : lenModes[li] + 's');
-    recBadge.style.display = 'none';
+    recKey.classList.remove('recording');
+    recDot.style.display = 'none';
   };
   recorder.start();
-  clipBtn.classList.add('recording');
-  recBadge.style.display = 'flex';
-  var total = lenModes[li];
-  if (total === 0) {
-    clipBtn.textContent = 'STOP';
-  } else {
-    var left = total;
-    clipBtn.innerHTML = '&#9210; ' + left;
-    clipTimer = setInterval(function () {
-      left--;
-      if (left > 0) clipBtn.innerHTML = '&#9210; ' + left;
-      else { clearInterval(clipTimer); if (recorder && recorder.state === 'recording') recorder.stop(); }
-    }, 1000);
+  recKey.classList.add('recording');
+  recDot.style.display = 'block';
+  setLCD('RECORDING \u25CF TAP AGAIN TO STOP');
+}
+recKey.onclick = function () {
+  clickSound(440);
+  if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+  if (!cv.captureStream || !window.MediaRecorder) {
+    showToast('RECORDING NOT SUPPORTED - USE SCREEN RECORD');
+    return;
   }
+  // if user turned sound on but mic isn't captured yet, grab it now (still a tap gesture)
+  if (soundOn && !micStream) requestMic(beginRecording);
+  else beginRecording();
 };
 
-document.getElementById('camBtn').onclick = function () {
+// ---- flip ----
+document.getElementById('flipKey').onclick = function () {
+  clickSound(680);
   facing = facing === 'user' ? 'environment' : 'user';
   startCamera();
 };
 
-var modeBtn = document.getElementById('modeBtn');
-modeBtn.onclick = function () {
-  mode = mode === 'loop' ? 'plain' : 'loop';
-  modeBtn.textContent = mode === 'loop' ? 'LOOP' : 'PLAIN';
-  showToast(mode === 'loop' ? 'RECURSION ON' : 'NORMAL CAMERA MODE');
-  if (mode === 'loop') playIntro('LOOP RESTORED');
+// ---- tray ----
+var tray = document.getElementById('tray');
+var gearKey = document.getElementById('gearKey');
+gearKey.onclick = function () {
+  clickSound(560);
+  tray.classList.toggle('open');
+  gearKey.classList.toggle('pressed');
 };
-
-var panel = document.getElementById('panel');
-document.getElementById('gearBtn').onclick = function () { panel.classList.toggle('open'); };
 
 var loopsSlider = document.getElementById('loopsSlider');
 var loopsOut = document.getElementById('loopsOut');
@@ -610,79 +729,74 @@ loopsSlider.oninput = function () {
   loops = parseInt(loopsSlider.value, 10);
   loopsOut.innerHTML = loops >= 13 ? '&#8734;' : loops;
 };
-
 var depthSlider = document.getElementById('depthSlider');
 var depthOut = document.getElementById('depthOut');
 depthSlider.oninput = function () {
   scale = parseInt(depthSlider.value, 10) / 100;
   depthOut.textContent = depthSlider.value;
 };
-
-var dirBtn = document.getElementById('dirBtn');
-dirBtn.onclick = function () {
-  dirOut = !dirOut;
-  dirBtn.textContent = dirOut ? 'DIR: OUT' : 'DIR: IN';
-  playIntro(dirOut ? 'REVERSING LOOP' : 'TUNNEL MODE');
+var twistSlider = document.getElementById('twistSlider');
+var twistOut = document.getElementById('twistOut');
+twistSlider.oninput = function () {
+  twist = parseInt(twistSlider.value, 10) / 100;
+  twistOut.textContent = twistSlider.value;
 };
 
-var shapeBtn = document.getElementById('shapeBtn');
-shapeBtn.onclick = function () {
-  shape = shape === 'rect' ? 'circle' : 'rect';
-  shapeBtn.textContent = shape === 'rect' ? 'SHAPE: RECT' : 'SHAPE: CIRCLE';
-};
+function chip(id, fn) {
+  var el = document.getElementById(id);
+  el.onclick = function () { clickSound(600); fn(el); };
+  return el;
+}
 
-var screensBtn = document.getElementById('screensBtn');
-screensBtn.onclick = function () {
+chip('modeChip', function (el) {
+  mode = mode === 'loop' ? 'plain' : 'loop';
+  el.innerHTML = mode === 'loop' ? '<b>&#127744;</b>LOOP' : '<b>&#128247;</b>PLAIN';
+  setLCD(mode === 'loop' ? 'RECURSION ON' : 'NORMAL CAMERA MODE');
+  if (mode === 'loop') playIntro('LOOP RESTORED');
+});
+chip('screensChip', function (el) {
   screens = screens === 1 ? 2 : screens === 2 ? 3 : 1;
-  screensBtn.textContent = 'SCREENS: ' + screens;
+  el.innerHTML = '<b>&#128421;</b>SCREENS ' + screens;
   playIntro('SCREENS x ' + screens);
-};
-
-var delayBtn = document.getElementById('delayBtn');
-var delayModes = [
-  { label: 'DELAY: SYNC', f: 1 },
-  { label: 'DELAY: LAG', f: 5 },
-  { label: 'DELAY: TIMEWARP', f: 12 }
-];
+});
+var delayModes = [{ n: 'SYNC', f: 1 }, { n: 'LAG', f: 5 }, { n: 'TIMEWARP', f: 12 }];
 var di = 0;
-delayBtn.onclick = function () {
+chip('delayChip', function (el) {
   di = (di + 1) % delayModes.length;
   delayFrames = delayModes[di].f;
-  delayBtn.textContent = delayModes[di].label;
-};
-
-var twistBtn = document.getElementById('twistBtn');
-var twistModes = [
-  { label: 'TWIST: OFF', r: 0 },
-  { label: 'TWIST: GENTLE', r: 0.05 },
-  { label: 'TWIST: VORTEX', r: 0.15 }
-];
-var ti = 0;
-twistBtn.onclick = function () {
-  ti = (ti + 1) % twistModes.length;
-  twist = twistModes[ti].r;
-  twistBtn.textContent = twistModes[ti].label;
-};
-
-var tintBtn = document.getElementById('tintBtn');
-tintBtn.onclick = function () {
-  tint = !tint;
-  tintBtn.textContent = tint ? 'TINT: RAINBOW' : 'TINT: OFF';
-};
-
-var bezelBtn = document.getElementById('bezelBtn');
-var bezelLabels = ['BEZEL: DARK', 'BEZEL: NONE', 'BEZEL: NEON', 'BEZEL: RAINBOW'];
-bezelBtn.onclick = function () {
+  el.innerHTML = '<b>&#8987;</b>' + delayModes[di].n;
+});
+chip('dirChip', function (el) {
+  dirOut = !dirOut;
+  el.innerHTML = '<b>&#8646;</b>' + (dirOut ? 'DIR OUT' : 'DIR IN');
+  playIntro(dirOut ? 'REVERSING LOOP' : 'TUNNEL MODE');
+});
+chip('shapeChip', function (el) {
+  shape = shape === 'rect' ? 'circle' : 'rect';
+  el.innerHTML = shape === 'rect' ? '<b>&#11035;</b>RECT' : '<b>&#9899;</b>CIRCLE';
+});
+var bezelNames = ['DARK', 'NO BEZEL', 'NEON', 'RAINBOW'];
+chip('bezelChip', function (el) {
   bezel = (bezel + 1) % 4;
-  bezelBtn.textContent = bezelLabels[bezel];
-};
-
-var fxBtn = document.getElementById('fxBtn');
-var fxLabels = ['FX: OFF', 'FX: ECHO', 'FX: GLITCH'];
-fxBtn.onclick = function () {
+  el.innerHTML = '<b>&#128444;</b>' + bezelNames[bezel];
+});
+chip('tintChip', function (el) {
+  tint = !tint;
+  el.classList.toggle('on', tint);
+  el.innerHTML = '<b>&#127752;</b>' + (tint ? 'TINT ON' : 'TINT OFF');
+});
+var fxNames = ['FX OFF', 'ECHO', 'GLITCH'];
+chip('fxChip', function (el) {
   fx = (fx + 1) % 3;
-  fxBtn.textContent = fxLabels[fx];
-};
+  el.classList.toggle('on', fx !== 0);
+  el.innerHTML = '<b>&#10024;</b>' + fxNames[fx];
+});
+var bodies = ['#f3c6cd', '#bfe6d2', '#cfd0ee', '#f5e3b8', '#d8d8de'];
+var bi = 0;
+chip('bodyChip', function () {
+  bi = (bi + 1) % bodies.length;
+  document.body.style.setProperty('--body', bodies[bi]);
+});
 </script>
 </body>
 </html>
