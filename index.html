@@ -172,81 +172,87 @@
     box-shadow: inset 4px 4px 10px rgba(120,10,25,.6), 0 0 18px rgba(255,60,90,.6);
   }
 
-  /* tray sits ABOVE the deck so keys stay usable */
+  /* frosted glass tray — the view stays visible through it */
   #tray {
     position: fixed;
-    left: 10px; right: 10px;
+    left: 12px; right: 12px;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 112px);
-    background: linear-gradient(160deg, #fbfbfd, #e3e3ea);
-    border-radius: 24px;
-    box-shadow: 0 12px 34px rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.9);
-    padding: 14px 16px 16px;
+    background: rgba(16,16,24,.5);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 20px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    padding: 10px 14px 12px;
     z-index: 8;
-    transform: translateY(130%) scale(.96);
+    transform: translateY(16px);
     opacity: 0;
     pointer-events: none;
-    transition: transform .28s cubic-bezier(.2,.9,.3,1.15), opacity .2s;
-    max-height: 52vh;
-    overflow-y: auto;
+    transition: transform .25s cubic-bezier(.2,.9,.3,1.15), opacity .2s;
   }
-  #tray.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+  #tray.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
   #tray h3 {
-    font-size: 11px;
+    font-size: 9px;
     letter-spacing: 3px;
-    color: #7a7a88;
+    color: rgba(255,255,255,.7);
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 4px;
   }
   .trayGrid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 9px;
-    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    margin-top: 8px;
+    padding: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .trayGrid::-webkit-scrollbar { display: none; }
   .chip {
-    border: none;
-    border-radius: 14px;
-    background: linear-gradient(145deg, #ffffff, #dfdfe6);
-    box-shadow: 4px 4px 10px rgba(0,0,0,.15), -3px -3px 8px rgba(255,255,255,.9);
-    padding: 10px 4px;
+    flex: 0 0 auto;
+    min-width: 76px;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 12px;
+    background: rgba(255,255,255,.12);
+    padding: 8px 10px;
     font-family: 'Courier New', monospace;
     font-size: 9px;
     letter-spacing: 1px;
-    color: #55555f;
+    color: #f0f0f6;
     text-align: center;
     cursor: pointer;
     line-height: 1.5;
   }
-  .chip:active { box-shadow: inset 3px 3px 8px rgba(0,0,0,.2), inset -2px -2px 6px rgba(255,255,255,.8); }
-  .chip b { display: block; font-size: 17px; margin-bottom: 2px; font-weight: normal; }
-  .chip.on { color: #0c8f6f; }
+  .chip:active { background: rgba(255,255,255,.3); }
+  .chip b { display: block; font-size: 16px; margin-bottom: 1px; font-weight: normal; }
+  .chip.on { color: #7dffb0; border-color: rgba(125,255,176,.55); }
   .sliderRow {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-top: 9px;
-    color: #55555f;
-    font-size: 10px;
+    gap: 8px;
+    margin-top: 7px;
+    color: #f0f0f6;
+    font-size: 9px;
     letter-spacing: 2px;
   }
-  .sliderRow label { min-width: 58px; }
-  .sliderRow output { min-width: 28px; text-align: right; font-size: 12px; }
+  .sliderRow label { min-width: 44px; }
+  .sliderRow output { min-width: 24px; text-align: right; font-size: 11px; }
   input[type=range] {
     flex: 1;
     -webkit-appearance: none;
-    height: 14px;
-    border-radius: 8px;
-    background: #d5d5de;
-    box-shadow: inset 2px 2px 6px rgba(0,0,0,.25), inset -1px -1px 3px rgba(255,255,255,.8);
+    height: 10px;
+    border-radius: 6px;
+    background: rgba(255,255,255,.2);
+    box-shadow: inset 1px 1px 4px rgba(0,0,0,.4);
     outline: none;
   }
   input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 30px;
-    height: 30px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: linear-gradient(145deg, #ffffff, #d8d8e0);
-    box-shadow: 3px 3px 8px rgba(0,0,0,.3), -2px -2px 6px rgba(255,255,255,.9), inset 0 0 0 2px rgba(0,0,0,.06);
+    box-shadow: 2px 2px 6px rgba(0,0,0,.45);
     cursor: pointer;
   }
   #toast {
@@ -310,7 +316,7 @@
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><circle class="dotFill" cx="12" cy="12" r="4.5"></circle></svg>
     </button>
     <button class="key" id="gearKey" aria-label="settings">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"></path></svg>
+      <svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h16"></path><circle cx="9" cy="7" r="2.4" fill="#ececf1"></circle><circle cx="15" cy="12" r="2.4" fill="#ececf1"></circle><circle cx="7" cy="17" r="2.4" fill="#ececf1"></circle></svg>
     </button>
   </div>
 
