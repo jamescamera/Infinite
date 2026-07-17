@@ -6,10 +6,10 @@
 <title>Infinite Recursion Camera</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; touch-action: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
   body { font-family: 'Courier New', monospace; }
   video { display: none; }
-  #cv { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  #cv { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; }
   .title {
     position: fixed;
     top: calc(env(safe-area-inset-top, 0px) + 14px);
@@ -163,7 +163,7 @@
   <video id="vid" autoplay playsinline muted></video>
   <canvas id="cv"></canvas>
 
-  <div class="title">&#10227; RECURSION CAM</div>
+  <div class="title" id="titleTag">&#10227; RECURSION CAM v4</div>
   <div id="recBadge"><div class="dot"></div>CLIP</div>
   <div id="bootMsg"></div>
   <div id="toast"></div>
@@ -351,8 +351,14 @@ function startCamera() {
 function beginLoop() {
   if (!running) { running = true; requestAnimationFrame(draw); }
 }
-document.getElementById('startBtn').addEventListener('click', function (e) { e.stopPropagation(); startCamera(); });
+var startBtn = document.getElementById('startBtn');
+startBtn.addEventListener('click', function (e) { e.stopPropagation(); startCamera(); });
+startBtn.addEventListener('touchend', function (e) { e.stopPropagation(); e.preventDefault(); startCamera(); });
 overlay.addEventListener('click', startCamera);
+overlay.addEventListener('touchend', function (e) { e.preventDefault(); startCamera(); });
+
+// script-loaded confirmation: if you can see the check mark, JS is alive
+document.getElementById('titleTag').textContent = '\u27F3 RECURSION CAM v4 \u2713';
 
 function drawBase() {
   if (!noCam && vid.videoWidth) {
@@ -538,13 +544,27 @@ clipBtn.onclick = function () {
   if (soundOn && micStream) {
     micStream.getAudioTracks().forEach(function (tr) { cs.addTrack(tr); });
   }
-  var mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus'
-    : MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+  // pick a mime type this browser actually supports (Safari = mp4, Chrome = webm)
+  var mime = '';
+  var candidates = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp9', 'video/webm', 'video/mp4'];
+  if (MediaRecorder.isTypeSupported) {
+    for (var mi = 0; mi < candidates.length; mi++) {
+      if (MediaRecorder.isTypeSupported(candidates[mi])) { mime = candidates[mi]; break; }
+    }
+  }
   var chunks = [];
-  recorder = new MediaRecorder(cs, { mimeType: mime, videoBitsPerSecond: 5000000 });
+  try {
+    recorder = mime
+      ? new MediaRecorder(cs, { mimeType: mime, videoBitsPerSecond: 5000000 })
+      : new MediaRecorder(cs);
+  } catch (recErr) {
+    try { recorder = new MediaRecorder(cs); }
+    catch (recErr2) { recorder = null; showToast('RECORDING NOT SUPPORTED ON THIS DEVICE - USE SCREEN RECORD'); return; }
+  }
+  var ext = (recorder.mimeType && recorder.mimeType.indexOf('mp4') > -1) ? 'mp4' : 'webm';
   recorder.ondataavailable = function (e) { if (e.data.size) chunks.push(e.data); };
   recorder.onstop = function () {
-    download(new Blob(chunks, { type: 'video/webm' }), 'recursion-' + Date.now() + '.webm');
+    download(new Blob(chunks, { type: 'video/' + ext }), 'recursion-' + Date.now() + '.' + ext);
     showToast('CLIP SAVED' + (soundOn ? ' (WITH SOUND)' : ''));
     recorder = null;
     clipBtn.classList.remove('recording');
